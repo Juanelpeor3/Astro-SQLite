@@ -1,0 +1,119 @@
+---
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
+import path from "path"; // Asegúrate de importar el módulo 'path'
+
+// Ruta a la base de datos SQLite
+const dbPath = path.resolve("src/lib/company_database.db");
+
+let FirstSelect = [];
+let SecondSelect = [];
+let ThirdSelect = [];
+
+// Obtener datos directamente desde la base de datos
+try {
+  const db = await open({
+    filename: dbPath,
+    driver: sqlite3.Database,
+  });
+  // Consultas a realizar en la bd
+  FirstSelect = await db.all(
+    "Select er.first_name,((er.salary/1900)*ep.hours_worked) as costo_salarial From employees_realistic er join employee_projects ep on er.employee_id = ep.employee_id"
+  );
+  SecondSelect = await db.all(
+    "Select p.project_name,SUM((er.salary/1900)*ep.hours_worked) as costo_salarial,p.budget as presupuesto From employees_realistic er join employee_projects ep on er.employee_id = ep.employee_id join projects p on p.project_id=ep.project_id group by p.project_name, p.budget"
+  );
+  ThirdSelect = await db.all(
+    "Select p.project_name,SUM((er.salary/1900)*ep.hours_worked) as costo_salarial,p.budget as presupuesto, ((SUM((er.salary/1900)*ep.hours_worked)))/p.budget as fraccion_presupuesto From employees_realistic er join employee_projects ep on er.employee_id = ep.employee_id join projects p on p.project_id=ep.project_id group by p.project_name, p.budget "
+  );
+  // Muestra el error (si hay) por consola
+} catch (error) {
+  console.error("Error al obtener las consultas:", error);
+}
+---
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Lista de Clientes</title>
+  </head>
+  <body class="bg-slate-400 flex flex-col items-center justify-center">
+    <h1 class="text-3xl">Consulta C</h1>
+    <table class="max-w-44 text-gray-500">
+      <tr class="bg-gray-50 uppercase">
+        <th class="border-r">Nombre</th>
+        <th class="">Costo Salarial</th>
+      </tr>
+      <!---Mostrar los datos en la tabla-->
+      {
+        FirstSelect.length > 0 ? (
+          FirstSelect.map((FirstSelect) => (
+            <tr class="text-gray-900 bg-white border-b-2">
+              <td class="pr-10 pl-1 border-r">{FirstSelect.first_name}</td>
+              <td class="pl-10 pr-1">{FirstSelect.costo_salarial}</td>
+            </tr>
+          ))
+        ) : (
+          // Si no hay datos pongo "..."
+          <tr>
+            <td>...</td>
+          </tr>
+        )
+      }
+    </table>
+    <br />
+    <h1 class="text-3xl">Consulta D</h1>
+    <table class="max-w-44 text-gray-500">
+      <tr class="bg-gray-50 uppercase">
+        <th class="border-r">Nombre</th>
+        <th class="border-r">Costo Salarial</th>
+        <th class="px-5">Presupuesto</th>
+      </tr>
+      <!---Mostrar los datos en la tabla-->
+      {
+        SecondSelect.length > 0 ? (
+          SecondSelect.map((SecondSelect) => (
+            <tr class="text-gray-900 bg-white border-b-2">
+              <td class="pr-10 pl-1 border-r">{SecondSelect.project_name}</td>
+              <td class="pl-5 pr-5 border-r">{SecondSelect.costo_salarial}</td>
+              <td class="pl-10 pr-1">{SecondSelect.presupuesto}</td>
+            </tr>
+          ))
+        ) : (
+          // Si no hay datos pongo "..."
+          <tr>
+            <td>...</td>
+          </tr>
+        )
+      }
+    </table>
+    <br />
+    <h1 class="text-3xl">Consulta E</h1>
+    <table class="max-w-44 text-gray-500">
+      <tr class="bg-gray-50 uppercase">
+        <th class="border-r">Nombre</th>
+        <th class="border-r">Costo Salarial</th>
+        <th class="border-r px-5">Presupuesto</th>
+        <th class="px-5">Fraccion Presupuesto</th>
+      </tr>
+      <!---Mostrar los datos en la tabla-->
+      {
+        ThirdSelect.length > 0 ? (
+          ThirdSelect.map((ThirdSelect) => (
+            <tr class="text-gray-900 bg-white border-b-2">
+              <td class="pr-10 pl-1 border-r">{ThirdSelect.project_name}</td>
+              <td class="pl-5 pr-5 border-r">{ThirdSelect.costo_salarial}</td>
+              <td class="pl-5 pr-5 border-r">{ThirdSelect.presupuesto}</td>
+              <td class="pl-10 pr-1">{ThirdSelect.fraccion_presupuesto}</td>
+            </tr>
+          ))
+        ) : (
+          // Si no hay datos pongo "..."
+          <tr>
+            <td>...</td>
+          </tr>
+        )
+      }
+    </table>
+  </body>
+</html>
